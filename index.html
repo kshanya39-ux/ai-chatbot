@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini Modern Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              primary: {
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
+              },
+              secondary: {
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
+              },
+              destructive: {
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
+              },
+              muted: {
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
+              },
+              accent: {
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
+              },
+              popover: {
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
+              },
+              card: {
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <style type="text/css">
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+        --primary: 240 5.9% 10%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 240 5.9% 10%;
+        --radius: 0.5rem;
+      }
+
+      .dark {
+        --background: 240 10% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 240 10% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 240 5.9% 10%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 240 4.9% 83.9%;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+      }
+
+      .chat-container::-webkit-scrollbar {
+        width: 6px;
+      }
+      .chat-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .chat-container::-webkit-scrollbar-thumb {
+        background: hsl(var(--muted));
+        border-radius: 10px;
+      }
+
+      .message-bubble {
+        max-width: 80%;
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .thinking-dots span {
+        animation: thinking 1.4s infinite both;
+      }
+      .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+      .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+      @keyframes thinking {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+      }
+
+      .sidebar-transition {
+        transition: transform 0.3s ease-in-out;
+      }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="h-screen flex overflow-hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-card border-r border-border flex-shrink-0 flex flex-col sidebar-transition fixed md:relative z-20 h-full -translate-x-full md:translate-x-0">
+      <div class="p-4 border-b border-border flex items-center justify-between">
+        <h1 class="font-semibold text-lg">Gemini Chat</h1>
+        <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-muted rounded-md">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      
+      <div class="p-4">
+        <button onclick="newChat()" class="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2 px-4 rounded-md hover:opacity-90 transition-opacity font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          New Chat
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="chat-history-list">
+        <!-- History items will be injected here -->
+      </div>
+
+      <div class="p-4 border-t border-border space-y-2">
+        <button onclick="toggleDarkMode()" class="w-full flex items-center gap-3 p-2 hover:bg-muted rounded-md transition-colors text-sm">
+          <span id="dark-mode-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          </span>
+          <span id="dark-mode-text">Light Mode</span>
+        </button>
+        <button onclick="clearAllChats()" class="w-full flex items-center gap-3 p-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors text-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          Clear All
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative bg-background">
+      <!-- Header -->
+      <header class="h-14 border-b border-border flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-muted rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>
+          </button>
+          <span class="font-medium">New Conversation</span>
+        </div>
+      </header>
+
+      <!-- Chat Area -->
+      <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-6 chat-container">
+        <!-- Welcome Message -->
+        <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center space-y-6 max-w-2xl mx-auto">
+          <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          </div>
+          <div class="space-y-2">
+            <h2 class="text-3xl font-bold tracking-tight">How can I help you today?</h2>
+            <p class="text-muted-foreground">I'm your friendly Gemini AI assistant. Ask me anything!</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+            <button onclick="usePrompt('Explain quantum computing like I\'m five')" class="p-4 text-left border border-border rounded-xl hover:bg-muted transition-colors group">
+              <p class="text-sm font-medium group-hover:text-primary">Explain</p>
+              <p class="text-xs text-muted-foreground mt-1">Quantum computing for kids</p>
+            </button>
+            <button onclick="usePrompt('Summarize the benefits of a healthy diet')" class="p-4 text-left border border-border rounded-xl hover:bg-muted transition-colors group">
+              <p class="text-sm font-medium group-hover:text-primary">Summarize</p>
+              <p class="text-xs text-muted-foreground mt-1">Benefits of healthy eating</p>
+            </button>
+            <button onclick="usePrompt('Translate \'Hello, how are you?\' to Japanese')" class="p-4 text-left border border-border rounded-xl hover:bg-muted transition-colors group">
+              <p class="text-sm font-medium group-hover:text-primary">Translate</p>
+              <p class="text-xs text-muted-foreground mt-1">English to Japanese</p>
+            </button>
+          </div>
+        </div>
+
+        <div id="messages-list" class="space-y-6 max-w-3xl mx-auto hidden">
+          <!-- Messages will be injected here -->
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="p-4 bg-background border-t border-border">
+        <div class="max-w-3xl mx-auto relative">
+          <div class="flex items-end gap-2 bg-muted rounded-2xl p-2 focus-within:ring-2 focus-within:ring-ring transition-all">
+            <textarea 
+              id="user-input" 
+              rows="1" 
+              placeholder="Type a message..." 
+              class="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 px-3 max-h-40 overflow-y-auto text-sm"
+              onkeydown="handleKeyDown(event)"
+            ></textarea>
+            
+            <div class="flex items-center gap-1 pb-1 pr-1">
+              <button id="voice-btn" onclick="toggleVoiceInput()" class="p-2 hover:bg-background rounded-xl text-muted-foreground transition-colors" title="Voice Input">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </button>
+              <button onclick="sendMessage()" class="p-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity" title="Send Message">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+          <p class="text-[10px] text-center text-muted-foreground mt-2">Gemini may provide inaccurate info. Check important info.</p>
+        </div>
+      </div>
+    </main>
+
+    <script type="module">
+      import { GoogleGenAI } from "@google/genai";
+
+      // --- State Management ---
+      let chatHistory = JSON.parse(localStorage.getItem('gemini_chat_history') || '[]');
+      let currentChatId = null;
+      let isThinking = false;
+      let recognition = null;
+
+      const chatContainer = document.getElementById('chat-container');
+      const messagesList = document.getElementById('messages-list');
+      const welcomeScreen = document.getElementById('welcome-screen');
+      const userInput = document.getElementById('user-input');
+      const historyList = document.getElementById('chat-history-list');
+      const sidebar = document.getElementById('sidebar');
+
+      // --- Initialization ---
+      function init() {
+        renderHistory();
+        if (chatHistory.length > 0) {
+          // Don't auto-load the last chat to keep it clean, but you could if you wanted
+        }
+        
+        // Auto-resize textarea
+        userInput.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // Speech Recognition Setup
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          recognition = new SpeechRecognition();
+          recognition.continuous = false;
+          recognition.interimResults = false;
+          recognition.lang = 'en-US';
+
+          recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            userInput.value = transcript;
+            userInput.dispatchEvent(new Event('input'));
+            document.getElementById('voice-btn').classList.remove('text-red-500', 'animate-pulse');
+          };
+
+          recognition.onerror = () => {
+            document.getElementById('voice-btn').classList.remove('text-red-500', 'animate-pulse');
+          };
+
+          recognition.onend = () => {
+            document.getElementById('voice-btn').classList.remove('text-red-500', 'animate-pulse');
+          };
+        } else {
+          document.getElementById('voice-btn').style.display = 'none';
+        }
+      }
+
+      // --- Gemini API ---
+      async function getGeminiResponse(prompt) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          
+          const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+              systemInstruction: "You are a friendly, natural, and helpful AI assistant. You enjoy conversation and provide clear, concise, and accurate information. You are not just for studying; you can chat about anything."
+            }
+          });
+
+          return response.text;
+        } catch (error) {
+          console.error("Gemini API Error:", error);
+          return "Sorry, I encountered an error. Please check your API key or connection.";
+        }
+      }
+
+      // --- Core Actions ---
+      window.sendMessage = async () => {
+        const text = userInput.value.trim();
+        if (!text || isThinking) return;
+
+        if (!currentChatId) {
+          createNewChat(text.substring(0, 30) + (text.length > 30 ? '...' : ''));
+        }
+
+        // Add User Message
+        addMessageToUI('user', text);
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        
+        // Update History State
+        const chat = chatHistory.find(c => c.id === currentChatId);
+        chat.messages.push({ role: 'user', text, timestamp: new Date().toISOString() });
+        saveHistory();
+
+        // Show Thinking
+        isThinking = true;
+        const thinkingId = addThinkingToUI();
+        scrollToBottom();
+
+        // Get AI Response
+        const response = await getGeminiResponse(text);
+        
+        // Remove Thinking & Add AI Message
+        removeThinkingFromUI(thinkingId);
+        addMessageToUI('ai', response);
+        
+        chat.messages.push({ role: 'ai', text: response, timestamp: new Date().toISOString() });
+        saveHistory();
+        
+        isThinking = false;
+        scrollToBottom();
+      };
+
+      window.handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          window.sendMessage();
+        }
+      };
+
+      window.usePrompt = (text) => {
+        userInput.value = text;
+        userInput.dispatchEvent(new Event('input'));
+        window.sendMessage();
+      };
+
+      window.newChat = () => {
+        currentChatId = null;
+        messagesList.innerHTML = '';
+        messagesList.classList.add('hidden');
+        welcomeScreen.classList.remove('hidden');
+        document.querySelector('header span').textContent = 'New Conversation';
+        if (window.innerWidth < 768) toggleSidebar();
+      };
+
+      function createNewChat(title) {
+        const id = Date.now().toString();
+        currentChatId = id;
+        chatHistory.unshift({
+          id,
+          title,
+          messages: [],
+          timestamp: new Date().toISOString()
+        });
+        renderHistory();
+        welcomeScreen.classList.add('hidden');
+        messagesList.classList.remove('hidden');
+        document.querySelector('header span').textContent = title;
+      }
+
+      window.loadChat = (id) => {
+        currentChatId = id;
+        const chat = chatHistory.find(c => c.id === id);
+        messagesList.innerHTML = '';
+        welcomeScreen.classList.add('hidden');
+        messagesList.classList.remove('hidden');
+        document.querySelector('header span').textContent = chat.title;
+        
+        chat.messages.forEach(msg => {
+          addMessageToUI(msg.role, msg.text, msg.timestamp);
+        });
+        
+        scrollToBottom();
+        if (window.innerWidth < 768) toggleSidebar();
+      };
+
+      window.clearAllChats = () => {
+        if (confirm('Are you sure you want to clear all chat history?')) {
+          chatHistory = [];
+          saveHistory();
+          renderHistory();
+          window.newChat();
+        }
+      };
+
+      // --- UI Helpers ---
+      function addMessageToUI(role, text, timestamp = new Date().toISOString()) {
+        const timeStr = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const isAI = role === 'ai';
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `flex ${isAI ? 'justify-start' : 'justify-end'} group`;
+        
+        msgDiv.innerHTML = `
+          <div class="message-bubble flex flex-col ${isAI ? 'items-start' : 'items-end'}">
+            <div class="flex items-center gap-2 mb-1 px-1">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">${role}</span>
+              <span class="text-[10px] text-muted-foreground/60">${timeStr}</span>
+            </div>
+            <div class="relative p-3 rounded-2xl text-sm ${isAI ? 'bg-muted text-foreground rounded-tl-none' : 'bg-primary text-primary-foreground rounded-tr-none'}">
+              <div class="whitespace-pre-wrap break-words">${escapeHtml(text)}</div>
+              ${isAI ? `
+                <button onclick="copyToClipboard(this)" class="absolute -right-8 top-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" title="Copy">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        
+        messagesList.appendChild(msgDiv);
+        scrollToBottom();
+      }
+
+      function addThinkingToUI() {
+        const id = 'thinking-' + Date.now();
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = 'flex justify-start';
+        div.innerHTML = `
+          <div class="message-bubble bg-muted p-3 rounded-2xl rounded-tl-none text-sm">
+            <div class="thinking-dots flex gap-1">
+              <span class="w-1.5 h-1.5 bg-muted-foreground rounded-full"></span>
+              <span class="w-1.5 h-1.5 bg-muted-foreground rounded-full"></span>
+              <span class="w-1.5 h-1.5 bg-muted-foreground rounded-full"></span>
+            </div>
+          </div>
+        `;
+        messagesList.appendChild(div);
+        return id;
+      }
+
+      function removeThinkingFromUI(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      }
+
+      function renderHistory() {
+        historyList.innerHTML = '';
+        chatHistory.forEach(chat => {
+          const btn = document.createElement('button');
+          btn.onclick = () => window.loadChat(chat.id);
+          btn.className = `w-full text-left p-2 rounded-md text-sm truncate transition-colors ${currentChatId === chat.id ? 'bg-muted font-medium' : 'hover:bg-muted/50'}`;
+          btn.innerHTML = `
+            <div class="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              ${escapeHtml(chat.title)}
+            </div>
+          `;
+          historyList.appendChild(btn);
+        });
+      }
+
+      function saveHistory() {
+        localStorage.setItem('gemini_chat_history', JSON.stringify(chatHistory));
+      }
+
+      function scrollToBottom() {
+        chatContainer.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      window.copyToClipboard = (btn) => {
+        const text = btn.parentElement.querySelector('.whitespace-pre-wrap').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          const originalIcon = btn.innerHTML;
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><polyline points="20 6 9 17 4 12"/></svg>';
+          setTimeout(() => btn.innerHTML = originalIcon, 2000);
+        });
+      };
+
+      window.toggleSidebar = () => {
+        sidebar.classList.toggle('-translate-x-full');
+      };
+
+      window.toggleDarkMode = () => {
+        const html = document.documentElement;
+        const isDark = html.classList.toggle('dark');
+        const icon = document.getElementById('dark-mode-icon');
+        const text = document.getElementById('dark-mode-text');
+        
+        if (isDark) {
+          icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>';
+          text.textContent = 'Light Mode';
+        } else {
+          icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+          text.textContent = 'Dark Mode';
+        }
+      };
+
+      window.toggleVoiceInput = () => {
+        if (!recognition) return;
+        
+        const btn = document.getElementById('voice-btn');
+        if (btn.classList.contains('text-red-500')) {
+          recognition.stop();
+        } else {
+          recognition.start();
+          btn.classList.add('text-red-500', 'animate-pulse');
+        }
+      };
+
+      // Run Init
+      init();
+    </script>
+  </body>
+</html>
+

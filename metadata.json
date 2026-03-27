@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Modern Chatbot",
+  "description": "A clean, modern AI chatbot powered by Gemini API with dark mode, voice input, and chat history.",
+  "requestFramePermissions": ["microphone"]
+}
